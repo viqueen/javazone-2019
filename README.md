@@ -69,3 +69,48 @@ And run it, it should create a file `touch.txt` under your target directory
 ```bash
 mvn javazone.plugin:javazone-maven-plugin:1.0-SNAPSHOT:jz
 ```
+
+### 2. Consume Maven Core API
+
+Update your pom file definition by adding the following dependency
+
+```xml
+<dependency>
+    <groupId>org.apache.maven</groupId>
+    <artifactId>maven-core</artifactId>
+    <version>${maven.version}</version>
+</dependency>
+```
+
+And discover what you can do with by updating your Mojo class
+
+```java
+@Mojo(name = "jz", defaultPhase = LifecyclePhase.VALIDATE)
+public class JavazoneMojo extends AbstractMojo {
+
+    @Parameter(defaultValue = "${project}")
+    private MavenProject project;
+
+
+    public void execute() throws MojoFailureException {
+        try {
+            List<Dependency> dependencies = project.getDependencies();
+            getLog().warn(dependencies.toString());
+
+            List<String> compileClasspathElements = project.getCompileClasspathElements();
+            List<String> testClasspathElements = project.getTestClasspathElements();
+            getLog().warn(compileClasspathElements.toString());
+            getLog().warn(testClasspathElements.toString());
+
+            Scm scm = project.getScm();
+            getLog().warn(scm.getUrl());
+            getLog().warn(scm.getConnection());
+            getLog().warn(scm.getTag());
+            
+        } catch (DependencyResolutionRequiredException exception) {
+            throw new MojoFailureException(exception.getMessage(), exception);
+        }
+    }
+
+}
+```

@@ -16,15 +16,17 @@ package javazone.plugin;
  * limitations under the License.
  */
 
+import org.apache.maven.artifact.DependencyResolutionRequiredException;
+import org.apache.maven.model.Dependency;
+import org.apache.maven.model.Scm;
 import org.apache.maven.plugin.AbstractMojo;
-import org.apache.maven.plugin.MojoExecutionException;
+import org.apache.maven.plugin.MojoFailureException;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
+import org.apache.maven.project.MavenProject;
 
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.util.List;
 
 /**
  * Goal which touches a timestamp file.
@@ -35,37 +37,28 @@ import java.io.IOException;
 @Mojo(name = "jz", defaultPhase = LifecyclePhase.VALIDATE)
 public class JavazoneMojo extends AbstractMojo {
 
-    @Parameter(defaultValue = "${project.build.directory}")
-    private File outputDirectory;
+    @Parameter(defaultValue = "${project}")
+    private MavenProject project;
 
-    public void execute() throws MojoExecutionException {
-        File f = outputDirectory;
 
-        // create the output directory if it does not exist
-        if (!f.exists()) {
-            f.mkdirs();
-        }
-
-        // create a file touch.txt
-        File touch = new File(f, "touch.txt");
-
-        FileWriter w = null;
+    public void execute() throws MojoFailureException {
         try {
-            w = new FileWriter(touch);
+            List<Dependency> dependencies = project.getDependencies();
+            getLog().warn(dependencies.toString());
 
-            // and write to it
-            w.write("touch.txt");
-        } catch (IOException e) {
-            throw new MojoExecutionException("Error creating file " + touch, e);
-        } finally {
-            // TODO: bleh we can use try with resource for this
-            if (w != null) {
-                try {
-                    w.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
+            List<String> compileClasspathElements = project.getCompileClasspathElements();
+            List<String> testClasspathElements = project.getTestClasspathElements();
+            getLog().warn(compileClasspathElements.toString());
+            getLog().warn(testClasspathElements.toString());
+
+            Scm scm = project.getScm();
+            getLog().warn(scm.getUrl());
+            getLog().warn(scm.getConnection());
+            getLog().warn(scm.getTag());
+
+        } catch (DependencyResolutionRequiredException exception) {
+            throw new MojoFailureException(exception.getMessage(), exception);
         }
     }
+
 }
