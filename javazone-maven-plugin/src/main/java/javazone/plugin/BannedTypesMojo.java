@@ -37,6 +37,12 @@ public class BannedTypesMojo extends AbstractMojo {
     @Parameter(defaultValue = "${project}", required = true, readonly = true)
     private MavenProject project;
 
+    @Parameter(property = "packages", readonly = true, required = true)
+    private Set<String> packages;
+
+    @Parameter(property = "types", readonly = true, required = true)
+    private Set<String> bannedTypes;
+
     public void execute() throws MojoFailureException {
         try {
             Set<Method> methods = resolveClasses().stream()
@@ -80,8 +86,7 @@ public class BannedTypesMojo extends AbstractMojo {
                 of(method.getReturnType().getCanonicalName()),
                 stream(method.getParameterTypes()).map(Class::getCanonicalName)
         ).filter(Objects::nonNull)
-                // TODO can we pass this to the Mojo at build time ?
-                .anyMatch("com.google.common.base.Predicate"::equals);
+                .anyMatch(item -> bannedTypes.contains(item));
     }
 
     private Method[] resolveMethods(Class<?> type) {
@@ -96,7 +101,7 @@ public class BannedTypesMojo extends AbstractMojo {
     }
 
     private boolean isApi(Class<?> type) {
-        // TODO can we pass this to the Mojo at build time ?
-        return type.getPackage().getName().contains("org.viqueen.api");
+        return packages.stream()
+                .anyMatch(item -> type.getPackage().getName().contains(item));
     }
 }
