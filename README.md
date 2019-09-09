@@ -36,7 +36,7 @@ Update your pom file definition with the following properties and dependencies
         <version>${maven.version}</version>
     </dependency>
     <dependency>
-        <groupId>org.apache.maven.plugin-tools</groupId> 
+        <groupId>org.apache.maven.plugin-tools</groupId>
         <artifactId>maven-plugin-annotations</artifactId>
         <version>${maven.version}</version>
     </dependency>
@@ -51,7 +51,7 @@ public class JavazoneMojo extends AbstractMojo {
     // resolves the target directory
     @Parameter(defaultValue = "${project.build.directory}")
     private File outputDirectory;
-    
+
     // ...
 }
 ```
@@ -106,7 +106,7 @@ public class JavazoneMojo extends AbstractMojo {
             getLog().warn(scm.getUrl());
             getLog().warn(scm.getConnection());
             getLog().warn(scm.getTag());
-            
+
         } catch (DependencyResolutionRequiredException exception) {
             throw new MojoFailureException(exception.getMessage(), exception);
         }
@@ -114,3 +114,86 @@ public class JavazoneMojo extends AbstractMojo {
 
 }
 ```
+
+### 3. Discover the codebase
+
+#### 3.1 usage of banned types
+
+pom.xml
+
+```xml
+ <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-plugin-plugin</artifactId>
+                <version>${maven.version}</version>
+                <executions>
+                    <execution>
+                        <id>default-descriptor</id>
+                        <phase>process-classes</phase>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build> 
+```
+
+```java
+@Mojo(name = "banned", defaultPhase = LifecyclePhase.PROCESS_CLASSES)
+public class BannedTypesMojo extends AbstractMojo {
+
+    @Parameter(defaultValue = "${project}", required = true, readonly = true)
+    private MavenProject project;
+
+    public void execute() {
+        Set<Method> methods = resolveClasses().stream()
+                .filter(this::isApi)
+                .map(this::resolveMethods)
+                .flatMap(Arrays::stream)
+                .filter(this::consumesBannedType)
+                .collect(toSet());
+
+        getLog().warn(methods.toString());
+    }
+
+    private Collection<Class> resolveClasses() {
+        // TODO actually resolve classes
+        return Collections.emptyList();
+    }
+
+    private boolean consumesBannedType(final Method method) {
+        return concat(
+                of(method.getReturnType().getCanonicalName()),
+                stream(method.getParameterTypes()).map(Class::getCanonicalName)
+        ).filter(Objects::nonNull)
+                // TODO can we pass this to the Mojo at build time ?
+                .anyMatch("com.google.common.base.Predicate"::equals);
+    }
+
+    private Method[] resolveMethods(Class<?> type) {
+        try {
+            return type.getDeclaredMethods();
+        } catch (Throwable exception) {
+            // as we are building out our plugin, it is preferable to let it do its magic and report
+            // issues as warnings, this is just one of my dev preferences really
+            getLog().warn(exception);
+            return new Method[]{};
+        }
+    }
+
+    private boolean isApi(Class<?> type) {
+        // TODO can we pass this to the Mojo at build time ?
+        return type.getPackage().getName().contains("org.viqueen.api");
+    }
+}
+```
+
