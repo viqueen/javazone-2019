@@ -11,6 +11,12 @@ You are using Maven as your build tool, but I am pretty sure the skills/ideas ar
 
 I trust the linked resources are enough to get you started on your platform/environment of choice
 
+### Optional (but recommended, but really do what you want)
+
+http://mvnvm.org/
+
+
+
 ### 1. Create a new maven plugin project
 
 Mojo archetype to the rescue
@@ -144,7 +150,7 @@ pom.xml
                 </executions>
             </plugin>
         </plugins>
-    </build> 
+    </build>
 ```
 
 ```java
